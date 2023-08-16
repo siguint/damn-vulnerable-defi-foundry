@@ -44,7 +44,7 @@ contract TheRewarderPool {
     }
 
     /**
-     * @notice sender must have approved `amountToDeposit` liquidity tokens in advance
+     * @notice sender must have approved `amount  // Assuming all three tokens have 18 decimals
      */
     function deposit(uint256 amountToDeposit) external {
         if (amountToDeposit == 0) revert MustDepositTokens();
